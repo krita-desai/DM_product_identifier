@@ -126,7 +126,7 @@ st.markdown('<label class="custom-upload-label">📸 Upload your photo below:</l
 
 
 # File uploader
-image_file = st.file_uploader("", type=["png", "jpg", "jpeg"])
+image_file = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
 
 
 # PREDICTION LOGIC
