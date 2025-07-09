@@ -1,37 +1,38 @@
 import streamlit as st
 from PIL import Image
-
 from ultralytics import YOLO
+from pathlib import Path
+import os
+import shutil
 
-@st.cache_resource  # So it doesn't reload every time
+# Cache the model
+@st.cache_resource
 def load_model():
-    return YOLO("best_new.pt")  # Make sure best.pt is in your project folder
+    return YOLO("best_new.pt")
 
 model = load_model()
 
 # Set page config
 st.set_page_config(
-   page_title="Del Monte Product Identifier",
-   page_icon="🍍",
-   layout="centered"
+    page_title="Del Monte Product Identifier",
+    page_icon="🍍",
+    layout="centered"
 )
-
 
 # Inject custom CSS
 st.markdown("""
-   <style>
-   /* Style the file uploader label */
-   .custom-upload-label {
-       font-size: 18px;
-       color: #007A33;  /* Del Monte green */
-       font-weight: 600;
-       font-family: Optima, sans-serif;
-       margin-bottom: 16px;
-       display: block;
-   }
+<style>
+/* Style the file uploader label */
+.custom-upload-label {
+    font-size: 18px;
+    color: #007A33;
+    font-weight: 600;
+    font-family: Optima, sans-serif;
+    margin-bottom: 16px;
+    display: block;
+}
 
-
-   /* OUTER WRAPPER */
+/* OUTER WRAPPER */
 .stFileUploader {
     background-color: #F4F1DE;
     padding: 20px;
@@ -57,90 +58,79 @@ section[data-testid="stFileUploader"] > div > div {
     align-items: center;
 }
 
-/* PREVENT INTERNAL LABEL FROM SHRINKING UP */
+/* Internal label */
 section[data-testid="stFileUploader"] label {
     font-size: 1.2rem;
     font-weight: 600;
     color: #000000;
     width: 100%;
-    max-width: 100%;
     text-align: center;
 }
-       .app-header {
-           font-family: Optima;
-           font-size: 2.5rem;
-           font-weight: 700;
-           color: #4E342E;
-           margin-bottom: 0.5rem;
-       }
-       .app-subheader {
-           font-size: 1.1rem;
-           font-weight: 600;
-           color: #555;
-           margin-bottom: 2rem;
-       }
-       .stButton>button {
-           background-color: #FFD700;
-           color: white;
-           font-weight: bold;
-           border-radius: 10px;
-       }
-       .top-green-bar {
-           width: 100%;
-           height: 60px;
-           background-color: #0A6B3E;
-           position: fixed;
-           top: 0;
-           left: 0;
-           z-index: 9999;
-       }
-       .css-18e3th9 {
-           padding-top: 70px;
-       }
-   </style>
+
+.app-header {
+    font-family: Optima;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #4E342E;
+    margin-bottom: 0.5rem;
+}
+
+.app-subheader {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 2rem;
+}
+
+.stButton>button {
+    background-color: #FFD700;
+    color: white;
+    font-weight: bold;
+    border-radius: 10px;
+}
+
+.top-green-bar {
+    width: 100%;
+    height: 60px;
+    background-color: #0A6B3E;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+}
+
+.css-18e3th9 {
+    padding-top: 70px;
+}
+</style>
 """, unsafe_allow_html=True)
 
-
-# Top green bar
+# Green bar
 st.markdown('<div class="top-green-bar"></div>', unsafe_allow_html=True)
 
-
-# Side-by-side logo and header
+# Header with logo
 col1, col2 = st.columns([1, 5])
-
-
 with col1:
-   st.image("del_monte_logo.png", width=80)
-
-
+    st.image("del_monte_logo.png", width=80)
 with col2:
-   st.markdown("<div class='app-header'>Del Monte Product Identifier</div>", unsafe_allow_html=True)
-
+    st.markdown("<div class='app-header'>Del Monte Product Identifier</div>", unsafe_allow_html=True)
 
 # Subheader
 st.markdown("<div class='app-subheader'>Welcome to Del Monte’s Product Identifier! Simply upload a photo of your product, and our model will recognize it for you within seconds.</div>", unsafe_allow_html=True)
 
-
-# Manually add the styled label
+# Upload label
 st.markdown('<label class="custom-upload-label">📸 Upload your photo below:</label>', unsafe_allow_html=True)
-
 
 # File uploader
 image_file = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
 
-
-from pathlib import Path
-import os
-import shutil
-
+# Predict if uploaded
 if image_file is not None:
     image = Image.open(image_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
-
-    # Save uploaded image for prediction
     image.save("temp.jpg")
 
-    # Optional: clear past runs (so results are clean each time)
+    # Optional: clean runs
     if os.path.exists("runs/detect"):
         shutil.rmtree("runs/detect")
 
@@ -150,11 +140,9 @@ if image_file is not None:
         class_ids = results[0].boxes.cls.tolist() if results and results[0].boxes is not None else []
 
         if class_ids:
-            top_result = results[0]
-            top_box = top_result.boxes[0]
+            top_box = results[0].boxes[0]
             class_id = int(top_box.cls[0].item())
             conf = float(top_box.conf[0].item())
-
             label = model.names[class_id].replace("_", " ").title()
             confidence_percent = round(conf * 100)
 
