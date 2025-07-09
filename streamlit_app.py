@@ -5,7 +5,7 @@ from ultralytics import YOLO
 
 @st.cache_resource  # So it doesn't reload every time
 def load_model():
-    return YOLO("best.pt")  # Make sure best.pt is in your project folder
+    return YOLO("best_new.pt")  # Make sure best.pt is in your project folder
 
 model = load_model()
 
@@ -129,16 +129,34 @@ st.markdown('<label class="custom-upload-label">📸 Upload your photo below:</l
 image_file = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
 
 
-# PREDICTION LOGIC
+from pathlib import Path
+import os
+import shutil
+
 if image_file is not None:
     image = Image.open(image_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Save temporarily for YOLO input
+    # Save uploaded image for prediction
     image.save("temp.jpg")
 
-    st.info("Analyzing image...")
-    results = model.predict("temp.jpg", save=True)  # Runs prediction and saves result image
+    # Optional: clear past runs (so results are clean each time)
+    if os.path.exists("runs/detect"):
+        shutil.rmtree("runs/detect")
 
-    # Load and show result image
-    st.image("runs/detect/predict/image0.jpg", caption="Prediction", use_column_width=True)
+    st.info("Analyzing image...")
+
+    # Run YOLO prediction
+    results = model.predict("temp.jpg")
+
+    # Get class IDs
+    class_ids = results[0].boxes.cls.tolist()
+
+    # Get class names from model
+    names = model.names
+
+    if class_ids:
+        predicted_labels = [names[int(cls_id)] for cls_id in class_ids]
+        st.success("This is our: " + ", ".join(predicted_labels))
+    else:
+        st.warning("No objects detected.")

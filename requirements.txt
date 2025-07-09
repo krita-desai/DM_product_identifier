@@ -2,3 +2,4 @@ streamlit
 ultralytics
 torch
 opencv-python
+Pillow
