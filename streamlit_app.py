@@ -144,10 +144,8 @@ if image_file is not None:
     if os.path.exists("runs/detect"):
         shutil.rmtree("runs/detect")
 
-    st.info("Analyzing image...")
-
-    # Run YOLO prediction
-    results = model.predict("temp.jpg")
+    with st.spinner("Analyzing image..."):
+        results = model.predict("temp.jpg")
 
     # Get class IDs
     class_ids = results[0].boxes.cls.tolist()
