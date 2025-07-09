@@ -154,7 +154,26 @@ if image_file is not None:
     names = model.names
 
     if class_ids:
-        predicted_labels = [names[int(cls_id)] for cls_id in class_ids]
-        st.success("This is our: " + ", ".join(predicted_labels))
+        predicted_labels = [
+            names[int(cls_id)].replace("_", " ").title()
+            for cls_id in class_ids
+        ]
+        st.markdown(
+    f"""
+    <div style='
+        background-color: #E8F5E9;
+        border-left: 6px solid #007A33;
+        padding: 20px;
+        border-radius: 12px;
+        font-family: Optima, sans-serif;
+        font-size: 1.3rem;
+        color: #2E7D32;
+        margin-top: 20px;
+    '>
+        ✅ We identified this as: <strong>{', '.join(predicted_labels)}</strong>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
     else:
         st.warning("No objects detected.")
