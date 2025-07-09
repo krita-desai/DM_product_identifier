@@ -147,33 +147,47 @@ if image_file is not None:
     with st.spinner("Analyzing image..."):
         results = model.predict("temp.jpg")
 
-    # Get class IDs
-    class_ids = results[0].boxes.cls.tolist()
+if class_ids:
+    top_result = results[0]
+    top_box = top_result.boxes[0]
+    class_id = int(top_box.cls[0].item())
+    conf = float(top_box.conf[0].item())
 
-    # Get class names from model
-    names = model.names
+    label = names[class_id].replace("_", " ").title()
+    confidence_percent = round(conf * 100)
 
-    if class_ids:
-        predicted_labels = [
-            names[int(cls_id)].replace("_", " ").title()
-            for cls_id in class_ids
-        ]
-        st.markdown(
-    f"""
-    <div style='
-        background-color: #E8F5E9;
-        border-left: 6px solid #007A33;
-        padding: 20px;
-        border-radius: 12px;
-        font-family: Optima, sans-serif;
-        font-size: 1.3rem;
-        color: #2E7D32;
-        margin-top: 20px;
-    '>
-        ✅ We identified this as: <strong>{', '.join(predicted_labels)}</strong>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-    else:
-        st.warning("No objects detected.")
+    st.markdown(
+        f"""
+        <div style='
+            background-color: #E8F5E9;
+            border-left: 6px solid #007A33;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: Optima, sans-serif;
+            font-size: 1.3rem;
+            color: #2E7D32;
+            margin-top: 20px;
+        '>
+            ✅ We’re <strong>{confidence_percent}%</strong> sure this is <strong>{label}</strong>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        """
+        <div style='
+            background-color: #FFF3E0;
+            border-left: 6px solid #FFB300;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: Optima, sans-serif;
+            font-size: 1.2rem;
+            color: #BF360C;
+            margin-top: 20px;
+        '>
+            ⚠️ We couldn’t detect any recognizable Del Monte products in this image. Please try again with a clearer picture.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
