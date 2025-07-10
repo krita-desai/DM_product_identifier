@@ -116,7 +116,7 @@ with col2:
     st.markdown("<div class='app-header'>Del Monte Product Identifier</div>", unsafe_allow_html=True)
 
 # Subheader
-st.markdown("<div class='app-subheader'>Welcome to Del Monte’s Product Identifier! Simply upload a photo of your product, and our model will recognize it for you within seconds.</div>", unsafe_allow_html=True)
+st.markdown("<div class='app-subheader'>Welcome to Del Monte’s Product Identifier!<br>Upload a photo of your product, and our model will recognize it for you within seconds.</div>", unsafe_allow_html=True)
 
 # Upload label
 st.markdown('<label class="custom-upload-label">📸 Upload your photo below:</label>', unsafe_allow_html=True)
@@ -176,7 +176,7 @@ if image_file is not None:
                     color: #BF360C;
                     margin-top: 20px;
                 '>
-                    ⚠️ We couldn’t detect any recognizable Del Monte products in this image.
+                    ⚠️ We couldn’t detect any recognizable Del Monte products in this image. Please make sure the entire product is clearly visible and try again.
                 </div>
                 """,
                 unsafe_allow_html=True
