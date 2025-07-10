@@ -158,7 +158,7 @@ if image_file is not None:
                     color: #2E7D32;
                     margin-top: 20px;
                 '>
-                    ✅ We’re <strong>{confidence_percent}%</strong> sure this is <strong>{label}</strong>
+                    ✅ We’re <strong>{confidence_percent}%</strong> sure these are <strong>{label}</strong>
                 </div>
                 """,
                 unsafe_allow_html=True
