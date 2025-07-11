@@ -8,7 +8,7 @@ import shutil
 # Cache the model
 @st.cache_resource
 def load_model():
-    return YOLO("best_new.pt")
+    return YOLO("best_newestest.pt")
 
 model = load_model()
 
