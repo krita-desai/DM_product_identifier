@@ -3,3 +3,5 @@ ultralytics
 torch
 opencv-python
 Pillow
+pytesseract
+opencv-python-headless
