@@ -4,6 +4,9 @@ from ultralytics import YOLO
 from pathlib import Path
 import os
 import shutil
+import base64
+import openai
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Cache the model
 @st.cache_resource
@@ -130,6 +133,7 @@ if image_file is not None:
     st.image(image, caption="Uploaded Image", use_container_width=True)
     image.save("temp.jpg")
 
+
     # Optional: clean runs
     if os.path.exists("runs/detect"):
         shutil.rmtree("runs/detect")
@@ -163,6 +167,36 @@ if image_file is not None:
                 """,
                 unsafe_allow_html=True
             )
+            # Extract text from image using OpenAI Vision API
+            with open("temp.jpg", "rb") as img_file:
+                vision_response = openai.ChatCompletion.create(
+                    model="gpt-4-vision-preview",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "Extract all visible text from this product image."},
+                                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(img_file.read()).decode()}}
+                            ],
+                        }
+                    ],
+                    max_tokens=300
+                )
+
+            extracted_text = vision_response["choices"][0]["message"]["content"]
+            # GPT-based text check
+            prompt = f"""You are verifying a product label. The predicted label is "{label}". 
+            Here is the text found on the product: "{extracted_text}". 
+            Does the text contain or suggest this label? Reply with a short sentence."""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=50
+            )
+
+            gpt_answer = response["choices"][0]["message"]["content"]
+            st.info(f"🧠 GPT says: {gpt_answer}")
         else:
             st.markdown(
                 """
