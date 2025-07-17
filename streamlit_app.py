@@ -1,12 +1,8 @@
 import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
-from pathlib import Path
 import os
 import shutil
-import base64
-import openai
-openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Cache the model
 @st.cache_resource
@@ -15,17 +11,16 @@ def load_model():
 
 model = load_model()
 
-# Set page config
+# Page configuration
 st.set_page_config(
     page_title="Del Monte Product Identifier",
     page_icon="🍍",
     layout="centered"
 )
 
-# Inject custom CSS
+# Custom CSS
 st.markdown("""
 <style>
-/* Style the file uploader label */
 .custom-upload-label {
     font-size: 18px;
     color: #007A33;
@@ -34,8 +29,6 @@ st.markdown("""
     margin-bottom: 16px;
     display: block;
 }
-
-/* OUTER WRAPPER */
 .stFileUploader {
     background-color: #F4F1DE;
     padding: 20px;
@@ -46,8 +39,6 @@ st.markdown("""
     margin: auto;
     box-shadow: 0px 3px 12px rgba(0, 0, 0, 0.1);
 }
-
-/* INNER YELLOW BOX */
 section[data-testid="stFileUploader"] > div > div {
     background-color: #FFD700;
     padding: 40px;
@@ -60,8 +51,6 @@ section[data-testid="stFileUploader"] > div > div {
     justify-content: center;
     align-items: center;
 }
-
-/* Internal label */
 section[data-testid="stFileUploader"] label {
     font-size: 1.2rem;
     font-weight: 600;
@@ -69,7 +58,6 @@ section[data-testid="stFileUploader"] label {
     width: 100%;
     text-align: center;
 }
-
 .app-header {
     font-family: Optima;
     font-size: 2.5rem;
@@ -77,21 +65,18 @@ section[data-testid="stFileUploader"] label {
     color: #4E342E;
     margin-bottom: 0.5rem;
 }
-
 .app-subheader {
     font-size: 1.1rem;
     font-weight: 600;
     color: #555;
     margin-bottom: 2rem;
 }
-
 .stButton>button {
     background-color: #FFD700;
     color: white;
     font-weight: bold;
     border-radius: 10px;
 }
-
 .top-green-bar {
     width: 100%;
     height: 60px;
@@ -101,14 +86,13 @@ section[data-testid="stFileUploader"] label {
     left: 0;
     z-index: 9999;
 }
-
 .css-18e3th9 {
     padding-top: 70px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# Green bar
+# Green header bar
 st.markdown('<div class="top-green-bar"></div>', unsafe_allow_html=True)
 
 # Header with logo
@@ -121,20 +105,16 @@ with col2:
 # Subheader
 st.markdown("<div class='app-subheader'>Welcome to Del Monte’s Product Identifier!<br>Upload a photo of your product, and our model will recognize it for you within seconds.</div>", unsafe_allow_html=True)
 
-# Upload label
+# Upload UI
 st.markdown('<label class="custom-upload-label">📸 Upload your photo below:</label>', unsafe_allow_html=True)
-
-# File uploader
 image_file = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
 
-# Predict if uploaded
+# Run prediction
 if image_file is not None:
     image = Image.open(image_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
     image.save("temp.jpg")
 
-
-    # Optional: clean runs
     if os.path.exists("runs/detect"):
         shutil.rmtree("runs/detect")
 
@@ -150,6 +130,12 @@ if image_file is not None:
             label = model.names[class_id].replace("_", " ").title()
             confidence_percent = round(conf * 100)
 
+            # Decide on singular/plural form
+            if label.lower().endswith("s"):
+                verb_phrase = f"these are <strong>{label}</strong>"
+            else:
+                verb_phrase = f"this is <strong>{label}</strong>"
+
             st.markdown(
                 f"""
                 <div style='
@@ -162,41 +148,11 @@ if image_file is not None:
                     color: #2E7D32;
                     margin-top: 20px;
                 '>
-                    ✅ We’re <strong>{confidence_percent}%</strong> sure these are <strong>{label}</strong>
+                    ✅ We’re <strong>{confidence_percent}%</strong> sure {verb_phrase}
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-            # Extract text from image using OpenAI Vision API
-            with open("temp.jpg", "rb") as img_file:
-                vision_response = openai.ChatCompletion.create(
-                    model="gpt-4-vision-preview",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": "Extract all visible text from this product image."},
-                                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(img_file.read()).decode()}}
-                            ],
-                        }
-                    ],
-                    max_tokens=300
-                )
-
-            extracted_text = vision_response["choices"][0]["message"]["content"]
-            # GPT-based text check
-            prompt = f"""You are verifying a product label. The predicted label is "{label}". 
-            Here is the text found on the product: "{extracted_text}". 
-            Does the text contain or suggest this label? Reply with a short sentence."""
-
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=50
-            )
-
-            gpt_answer = response["choices"][0]["message"]["content"]
-            st.info(f"🧠 GPT says: {gpt_answer}")
         else:
             st.markdown(
                 """
