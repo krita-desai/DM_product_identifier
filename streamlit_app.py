@@ -124,17 +124,37 @@ if image_file is not None:
         class_ids = results[0].boxes.cls.tolist() if results and results[0].boxes is not None else []
 
         if class_ids:
-            top_box = results[0].boxes[0]
-            class_id = int(top_box.cls[0].item())
-            conf = float(top_box.conf[0].item())
-            label = model.names[class_id].replace("_", " ").title()
-            confidence_percent = round(conf * 100)
+            # Dictionary to store {class_label: (highest_conf, count)}
+            predictions = {}
 
-            # Decide on singular/plural form
-            if label.lower().endswith("s"):
-                verb_phrase = f"these are <strong>{label}</strong>"
-            else:
-                verb_phrase = f"this is <strong>{label}</strong>"
+            for box in results[0].boxes:
+                conf = float(box.conf[0].item())
+                if conf < 0.5:  # Skip predictions < 50%
+                    continue
+                class_id = int(box.cls[0].item())
+                conf = float(box.conf[0].item())
+                label = model.names[class_id].replace("_", " ").title()
+
+                if label not in predictions:
+                    predictions[label] = (conf, 1)
+                else:
+                    # Update highest confidence & increment count
+                    max_conf, count = predictions[label]
+                    predictions[label] = (max(max_conf, conf), count + 1)
+
+            # Build display messages
+            messages = []
+            for label, (conf, count) in predictions.items():
+                confidence_percent = round(conf * 100)
+                display_label = f"{count} {label}" if count > 1 else label
+
+                # Singular/plural verb
+                verb_phrase = f"these are <strong>{display_label}</strong>" if display_label.lower().endswith("s") or count > 1 else f"this is <strong>{display_label}</strong>"
+
+                messages.append(f"✅ We’re <strong>{confidence_percent}%</strong> sure {verb_phrase}")
+
+            # Combine all predictions into a single HTML block
+            message_html = "<br>".join(messages)
 
             st.markdown(
                 f"""
@@ -148,7 +168,7 @@ if image_file is not None:
                     color: #2E7D32;
                     margin-top: 20px;
                 '>
-                    ✅ We’re <strong>{confidence_percent}%</strong> sure {verb_phrase}
+                    {message_html}
                 </div>
                 """,
                 unsafe_allow_html=True
