@@ -173,11 +173,54 @@ if image_file is not None:
                 """,
                 unsafe_allow_html=True
             )
+            import base64
+
+        # Load and encode the shopping cart image
+            def get_base64_image(image_path):
+                with open(image_path, "rb") as img_file:
+                    return base64.b64encode(img_file.read()).decode()
+
+            shopping_cart_base64 = get_base64_image("shopping_cart.png")  # Ensure this image is in your folder
+
+            # Add Buy button with embedded shopping cart icon
+            buy_url = "https://www.delmonte.com/where-to-buy"
+
+            st.markdown(
+                f"""
+                <div style='text-align: center; margin-top: 20px;'>
+                    <a href="{buy_url}" target="_blank" style="text-decoration: none;">
+                        <button style="
+                            background-color: #FFD700;
+                            color: #FFFFFF;
+                            border: none;
+                            padding: 12px 24px;
+                            font-size: 1.2rem;
+                            font-weight: bold;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 10px;
+                            transition: background-color 0.3s ease;
+                        " 
+                        onmouseover="this.style.backgroundColor='#E6C200'"
+                        onmouseout="this.style.backgroundColor='#FFD700'">
+                            <img src="data:image/png;base64,{shopping_cart_base64}" style="width: 20px; height: 20px; vertical-align: middle;"/>
+                            Get it now
+                        </button>
+                    </a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
         else:
             st.markdown(
                 """
                 <div style='
-                    background-color: #FFF3E0;
+                    background-color: #FFD700;
                     border-left: 6px solid #FFB300;
                     padding: 20px;
                     border-radius: 12px;
