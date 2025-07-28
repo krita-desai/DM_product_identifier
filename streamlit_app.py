@@ -165,6 +165,7 @@ if image_file is not None:
                     border-radius: 12px;
                     font-family: Optima, sans-serif;
                     font-size: 1.3rem;
+                    text-align: center;
                     color: #2E7D32;
                     margin-top: 20px;
                 '>
