@@ -1,16 +1,12 @@
 import streamlit as st
+import requests
 from PIL import Image
-from ultralytics import YOLO
-import os
-import shutil
+import io
 import base64
+import os
 
-# Cache the model
-@st.cache_resource
-def load_model():
-    return YOLO("best_edge_cases.pt")
-
-model = load_model()
+# FastAPI endpoint
+API_URL = "https://9b89a4025884.ngrok-free.app/predict/"  # Change this to your deployed API URL if needed
 
 # Page configuration
 st.set_page_config(
@@ -104,155 +100,121 @@ with col2:
     st.markdown("<div class='app-header'>Del Monte Product Identifier</div>", unsafe_allow_html=True)
 
 # Subheader
-st.markdown("<div class='app-subheader'>Welcome to Del Monte’s Product Identifier!<br>Upload a photo of your product, and our model will recognize it for you within seconds.</div>", unsafe_allow_html=True)
+st.markdown(
+    "<div class='app-subheader'>Welcome to Del Monte’s Product Identifier!<br>Upload a photo of your product, and our model will recognize it for you within seconds.</div>",
+    unsafe_allow_html=True
+)
 
 # Upload UI
 st.markdown('<label class="custom-upload-label">📸 Upload your photo below:</label>', unsafe_allow_html=True)
 image_file = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
 
-# Run prediction
 if image_file is not None:
     image = Image.open(image_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
-    image.save("temp.jpg")
 
-    if os.path.exists("runs/detect"):
-        shutil.rmtree("runs/detect")
+    # Convert image to bytes for API
+    img_bytes = io.BytesIO()
+    image.save(img_bytes, format=image.format)
+    img_bytes.seek(0)
 
-    with st.spinner("Analyzing image..."):
-        results = model.predict("temp.jpg")
-
-        class_ids = results[0].boxes.cls.tolist() if results and results[0].boxes is not None else []
-
-        if class_ids:
-            predictions = {}
-            low_confidence_detected = False
-
-            # Process detections
-            for box in results[0].boxes:
-                conf = float(box.conf[0].item())
-                class_id = int(box.cls[0].item())
-                label = model.names[class_id].replace("_", " ").title()
-
-                if conf < 0.5:  # Confidence < 50%
-                    low_confidence_detected = True
-                    continue  # Don't add low-confidence detections
-
-                if label not in predictions:
-                    predictions[label] = (conf, 1)
-                else:
-                    max_conf, count = predictions[label]
-                    predictions[label] = (max(max_conf, conf), count + 1)
-
-            # If all detections are low confidence
-            if low_confidence_detected and not predictions:
-                st.markdown(
-                    """
-                    <div style='
-                        background-color: #FFEBEE;
-                        border-left: 6px solid #D32F2F;
-                        padding: 20px;
-                        border-radius: 12px;
-                        font-family: Optima, sans-serif;
-                        font-size: 1.2rem;
-                        color: #C62828;
-                        margin-top: 20px;
-                        text-align: center;
-                    '>
-                        ⚠️ We couldn’t detect any recognizable Del Monte products in this image. Please make sure the entire product is clearly visible and try again.
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                st.stop()
-
-            # Build display messages
-            if predictions:
-                messages = []
-                for label, (conf, count) in predictions.items():
-                    confidence_percent = round(conf * 100)
-                    display_label = f"{count} {label}" if count > 1 else label
-                    verb_phrase = (
-                        f"these are <strong>{display_label}</strong>"
-                        if display_label.lower().endswith("s") or count > 1
-                        else f"this is <strong>{display_label}</strong>"
-                    )
-                    messages.append(f"✅ We’re <strong>{confidence_percent}%</strong> sure {verb_phrase}")
-
-                message_html = "<br>".join(messages)
-
-                st.markdown(
-                    f"""
-                    <div style='
-                        background-color: #E8F5E9;
-                        border-left: 6px solid #007A33;
-                        padding: 20px;
-                        border-radius: 12px;
-                        font-family: Optima, sans-serif;
-                        font-size: 1.3rem;
-                        text-align: center;
-                        color: #2E7D32;
-                        margin-top: 20px;
-                    '>
-                        {message_html}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                # Shopping cart button
-                def get_base64_image(image_path):
-                    with open(image_path, "rb") as img_file:
-                        return base64.b64encode(img_file.read()).decode()
-
-                shopping_cart_base64 = get_base64_image("shopping_cart.png")
-                buy_url = "https://www.delmonte.com/where-to-buy"
-
-                st.markdown(
-                    f"""
-                    <div style='text-align: center; margin-top: 20px;'>
-                        <a href="{buy_url}" target="_blank" style="text-decoration: none;">
-                            <button style="
-                                background-color: #FFD700;
-                                color: #FFFFFF;
-                                border: none;
-                                padding: 12px 24px;
-                                font-size: 1.2rem;
-                                font-weight: bold;
-                                border-radius: 8px;
-                                cursor: pointer;
-                                display: inline-flex;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 10px;
-                                transition: background-color 0.3s ease;
-                            " 
-                            onmouseover="this.style.backgroundColor='#E6C200'"
-                            onmouseout="this.style.backgroundColor='#FFD700'">
-                                <img src="data:image/png;base64,{shopping_cart_base64}" style="width: 20px; height: 20px; vertical-align: middle;"/>
-                                Get it now
-                            </button>
-                        </a>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-        else:
-            st.markdown(
-                """
-                <div style='
-                    background-color: #FFD700;
-                    border-left: 6px solid #FFB300;
-                    padding: 20px;
-                    border-radius: 12px;
-                    font-family: Optima, sans-serif;
-                    font-size: 1.2rem;
-                    color: #BF360C;
-                    margin-top: 20px;
-                '>
-                    ⚠️ We couldn’t detect any recognizable Del Monte products in this image. Please make sure the entire product is clearly visible and try again.
-                </div>
-                """,
-                unsafe_allow_html=True
+    with st.spinner("Analyzing image via API..."):
+        try:
+            # Send the image to FastAPI
+            response = requests.post(
+                API_URL,
+                files={"file": (image_file.name, img_bytes, f"image/{image.format.lower()}")}
             )
+
+            if response.status_code == 200:
+                result = response.json()
+                predictions = result.get("predictions", [])
+
+                if predictions:
+                    # Build messages
+                    messages = []
+                    for pred in predictions:
+                        label = pred["label"].replace("_", " ").title()
+                        conf = round(pred["confidence"] * 100)
+                        messages.append(f"✅ We’re <strong>{conf}%</strong> sure this is <strong>{label}</strong>")
+                    message_html = "<br>".join(messages)
+
+                    st.markdown(
+                        f"""
+                        <div style='
+                            background-color: #E8F5E9;
+                            border-left: 6px solid #007A33;
+                            padding: 20px;
+                            border-radius: 12px;
+                            font-family: Optima, sans-serif;
+                            font-size: 1.3rem;
+                            text-align: center;
+                            color: #2E7D32;
+                            margin-top: 20px;
+                        '>
+                            {message_html}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    # Shopping cart button
+                    def get_base64_image(image_path):
+                        with open(image_path, "rb") as img_file:
+                            return base64.b64encode(img_file.read()).decode()
+
+                    shopping_cart_base64 = get_base64_image("shopping_cart.png")  # Ensure this image exists
+                    buy_url = "https://www.delmonte.com/where-to-buy"
+
+                    st.markdown(
+                        f"""
+                        <div style='text-align: center; margin-top: 20px;'>
+                            <a href="{buy_url}" target="_blank" style="text-decoration: none;">
+                                <button style="
+                                    background-color: #FFD700;
+                                    color: #FFFFFF;
+                                    border: none;
+                                    padding: 12px 24px;
+                                    font-size: 1.2rem;
+                                    font-weight: bold;
+                                    border-radius: 8px;
+                                    cursor: pointer;
+                                    display: inline-flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    gap: 10px;
+                                    transition: background-color 0.3s ease;
+                                " 
+                                onmouseover="this.style.backgroundColor='#E6C200'"
+                                onmouseout="this.style.backgroundColor='#FFD700'">
+                                    <img src="data:image/png;base64,{shopping_cart_base64}" style="width: 20px; height: 20px; vertical-align: middle;"/>
+                                    Get it now
+                                </button>
+                            </a>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        """
+                        <div style='
+                            background-color: #FFD700;
+                            border-left: 6px solid #FFB300;
+                            padding: 20px;
+                            border-radius: 12px;
+                            font-family: Optima, sans-serif;
+                            font-size: 1.2rem;
+                            color: #BF360C;
+                            margin-top: 20px;
+                        '>
+                            ⚠️ We couldn’t detect any recognizable Del Monte products in this image. Please make sure the entire product is clearly visible and try again.
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.error(f"API Error: {response.status_code} - {response.text}")
+
+        except requests.exceptions.ConnectionError:
+            st.error("❌ Could not connect to the API. Make sure the FastAPI server is running.")
