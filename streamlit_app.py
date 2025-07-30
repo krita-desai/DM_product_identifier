@@ -159,8 +159,7 @@ if image_file is not None:
                         margin-top: 20px;
                         text-align: center;
                     '>
-                        ⚠️ We detected a product, but with low confidence (< 50%).<br>
-                        Please try uploading a clearer image.
+                        ⚠️ We couldn’t detect any recognizable Del Monte products in this image. Please make sure the entire product is clearly visible and try again.
                     </div>
                     """,
                     unsafe_allow_html=True
