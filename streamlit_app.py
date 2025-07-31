@@ -120,7 +120,6 @@ if image_file is not None:
 
     with st.spinner("Analyzing image via API..."):
         try:
-            # Send the image to FastAPI
             response = requests.post(
                 API_URL,
                 files={"file": (image_file.name, img_bytes, f"image/{image.format.lower()}")}
@@ -131,70 +130,92 @@ if image_file is not None:
                 predictions = result.get("predictions", [])
 
                 if predictions:
-                    # Build messages
                     messages = []
+                    low_confidence = any(pred["confidence"] < 0.5 for pred in predictions)
+
                     for pred in predictions:
                         label = pred["label"].replace("_", " ").title()
                         conf = round(pred["confidence"] * 100)
-                        messages.append(f"✅ We’re <strong>{conf}%</strong> sure this is <strong>{label}</strong>")
+                        article = "are" if label.endswith("s") else "is"
+                        messages.append(f"✅ We’re <strong>{conf}%</strong> sure this {article} <strong>{label}</strong>")
+
                     message_html = "<br>".join(messages)
 
-                    st.markdown(
-                        f"""
-                        <div style='
-                            background-color: #E8F5E9;
-                            border-left: 6px solid #007A33;
-                            padding: 20px;
-                            border-radius: 12px;
-                            font-family: Optima, sans-serif;
-                            font-size: 1.3rem;
-                            text-align: center;
-                            color: #2E7D32;
-                            margin-top: 20px;
-                        '>
-                            {message_html}
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    if low_confidence:
+                        st.markdown(
+                            """
+                            <div style='
+                                background-color: #FFD700;
+                                border-left: 6px solid #FFB300;
+                                padding: 20px;
+                                border-radius: 12px;
+                                font-family: Optima, sans-serif;
+                                font-size: 1.2rem;
+                                color: #BF360C;
+                                margin-top: 20px;
+                            '>
+                                ⚠️ We couldn’t detect any recognizable Del Monte products in this image. Please make sure the entire product is clearly visible and try again.
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            f"""
+                            <div style='
+                                background-color: #E8F5E9;
+                                border-left: 6px solid #007A33;
+                                padding: 20px;
+                                border-radius: 12px;
+                                font-family: Optima, sans-serif;
+                                font-size: 1.3rem;
+                                text-align: center;
+                                color: #2E7D32;
+                                margin-top: 20px;
+                            '>
+                                {message_html}
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
-                    # Shopping cart button
-                    def get_base64_image(image_path):
-                        with open(image_path, "rb") as img_file:
-                            return base64.b64encode(img_file.read()).decode()
+                        # Buy button
+                        def get_base64_image(image_path):
+                            with open(image_path, "rb") as img_file:
+                                return base64.b64encode(img_file.read()).decode()
 
-                    shopping_cart_base64 = get_base64_image("shopping_cart.png")  # Ensure this image exists
-                    buy_url = "https://www.delmonte.com/where-to-buy"
+                        shopping_cart_base64 = get_base64_image("shopping_cart.png")
+                        buy_url = "https://www.delmonte.com/where-to-buy"
 
-                    st.markdown(
-                        f"""
-                        <div style='text-align: center; margin-top: 20px;'>
-                            <a href="{buy_url}" target="_blank" style="text-decoration: none;">
-                                <button style="
-                                    background-color: #FFD700;
-                                    color: #FFFFFF;
-                                    border: none;
-                                    padding: 12px 24px;
-                                    font-size: 1.2rem;
-                                    font-weight: bold;
-                                    border-radius: 8px;
-                                    cursor: pointer;
-                                    display: inline-flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    gap: 10px;
-                                    transition: background-color 0.3s ease;
-                                " 
-                                onmouseover="this.style.backgroundColor='#E6C200'"
-                                onmouseout="this.style.backgroundColor='#FFD700'">
-                                    <img src="data:image/png;base64,{shopping_cart_base64}" style="width: 20px; height: 20px; vertical-align: middle;"/>
-                                    Get it now
-                                </button>
-                            </a>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                        st.markdown(
+                            f"""
+                            <div style='text-align: center; margin-top: 20px;'>
+                                <a href="{buy_url}" target="_blank" style="text-decoration: none;">
+                                    <button style="
+                                        background-color: #FFD700;
+                                        color: #FFFFFF;
+                                        border: none;
+                                        padding: 12px 24px;
+                                        font-size: 1.2rem;
+                                        font-weight: bold;
+                                        border-radius: 8px;
+                                        cursor: pointer;
+                                        display: inline-flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        gap: 10px;
+                                        transition: background-color 0.3s ease;
+                                    " 
+                                    onmouseover="this.style.backgroundColor='#E6C200'"
+                                    onmouseout="this.style.backgroundColor='#FFD700'">
+                                        <img src="data:image/png;base64,{shopping_cart_base64}" style="width: 20px; height: 20px; vertical-align: middle;"/>
+                                        Get it now
+                                    </button>
+                                </a>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
                 else:
                     st.markdown(
                         """
@@ -218,3 +239,4 @@ if image_file is not None:
 
         except requests.exceptions.ConnectionError:
             st.error("❌ Could not connect to the API. Make sure the FastAPI server is running.")
+
