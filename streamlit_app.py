@@ -118,7 +118,7 @@ if image_file is not None:
     image.save(img_bytes, format=image.format)
     img_bytes.seek(0)
 
-    with st.spinner("Analyzing image via API..."):
+    with st.spinner("Analyzing image..."):
         try:
             response = requests.post(
                 API_URL,
