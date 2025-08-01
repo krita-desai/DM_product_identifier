@@ -4,9 +4,10 @@ from PIL import Image
 import io
 import base64
 import os
+from collections import defaultdict
 
 # FastAPI endpoint
-API_URL = "https://9b89a4025884.ngrok-free.app/predict/"  # Change this to your deployed API URL if needed
+API_URL = "https://9b89a4025884.ngrok-free.app/predict/"
 
 # Page configuration
 st.set_page_config(
@@ -113,7 +114,6 @@ if image_file is not None:
     image = Image.open(image_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Convert image to bytes for API
     img_bytes = io.BytesIO()
     image.save(img_bytes, format=image.format)
     img_bytes.seek(0)
@@ -130,14 +130,26 @@ if image_file is not None:
                 predictions = result.get("predictions", [])
 
                 if predictions:
-                    messages = []
-                    low_confidence = any(pred["confidence"] < 0.5 for pred in predictions)
-
+                    label_groups = defaultdict(list)
                     for pred in predictions:
-                        label = pred["label"].replace("_", " ").title()
-                        conf = round(pred["confidence"] * 100)
-                        article = "are" if label.endswith("s") else "is"
-                        messages.append(f"✅ We’re <strong>{conf}%</strong> sure this {article} <strong>{label}</strong>")
+                        label_groups[pred["label"]].append(pred["confidence"])
+
+                    messages = []
+                    low_confidence = False
+
+                    for label, confs in label_groups.items():
+                        title_label = label.replace("_", " ").title()
+                        max_conf = round(max(confs) * 100)
+                        count = len(confs)
+
+                        if count == 1:
+                            if max_conf < 50:
+                                low_confidence = True
+                            article = "these are" if title_label.endswith("s") else "this is"
+                            message = f"✅ We’re <strong>{max_conf}%</strong> sure {article} <strong>{title_label}</strong>"
+                        else:
+                            message = f"✅ We detected <strong>{count}</strong> <strong>{title_label}</strong> with up to <strong>{max_conf}%</strong> confidence"
+                        messages.append(message)
 
                     message_html = "<br>".join(messages)
 
@@ -179,7 +191,6 @@ if image_file is not None:
                             unsafe_allow_html=True
                         )
 
-                        # Buy button
                         def get_base64_image(image_path):
                             with open(image_path, "rb") as img_file:
                                 return base64.b64encode(img_file.read()).decode()
@@ -236,7 +247,6 @@ if image_file is not None:
                     )
             else:
                 st.error(f"API Error: {response.status_code} - {response.text}")
-
         except requests.exceptions.ConnectionError:
             st.error("❌ Could not connect to the API. Make sure the FastAPI server is running.")
 
